@@ -1,0 +1,30 @@
+logging: false
+
+health_check:
+  interval_seconds: 60
+  timeout_seconds: 5
+
+models:
+  - name: "meta-llama/Llama-3.1-8B-Instruct"
+    servers:
+      - url: "http://gpu-server-1:8000"
+        api_key: "your-api-key-here"
+        max_concurrent_requests: 32
+      - url: "http://gpu-server-2:8000"
+        api_key: "your-api-key-here"
+        max_concurrent_requests: 32
+
+  - name: "BAAI/bge-large-en-v1.5"
+    servers:
+      - url: "http://gpu-server-3:8000"
+        api_key: "your-api-key-here"
+        max_concurrent_requests: 64
+
+  - name: "mistralai/Mistral-7B-Instruct-v0.3"
+    servers:
+      - url: "http://gpu-server-1:8001"
+        api_key: "your-api-key-here"
+        max_concurrent_requests: 16
+      - url: "http://gpu-server-4:8000"
+        api_key: "your-api-key-here"
+        max_concurrent_requests: 24

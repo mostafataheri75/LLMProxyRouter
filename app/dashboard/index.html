@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Proxy Router - Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 24px; background: #f0f2f5; color: #1a1a1a; }
+        h1 { font-size: 1.6em; margin-bottom: 4px; }
+        h2 { font-size: 1.15em; margin: 24px 0 10px; color: #444; }
+        .refresh-info { color: #888; font-size: 0.85em; margin-bottom: 20px; }
+        table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 28px; }
+        th, td { padding: 10px 16px; text-align: left; border-bottom: 1px solid #eee; font-size: 0.92em; }
+        th { background: #2c3e50; color: #fff; font-weight: 600; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.03em; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8f9fa; }
+        .healthy { color: #27ae60; font-weight: 600; }
+        .unhealthy { color: #e74c3c; font-weight: 600; }
+        .toggle-btn { padding: 5px 14px; cursor: pointer; border-radius: 4px; border: 1px solid #ccc; font-size: 0.85em; font-weight: 600; transition: background 0.15s; }
+        .drain-off { background: #d4edda; color: #155724; border-color: #c3e6cb; }
+        .drain-off:hover { background: #c3e6cb; }
+        .drain-on { background: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+        .drain-on:hover { background: #f5c6cb; }
+        .no-data { text-align: center; padding: 20px; color: #999; }
+    </style>
+</head>
+<body>
+    <h1>LLM Proxy Router Dashboard</h1>
+    <p class="refresh-info">Auto-refreshes every 10 seconds &middot; Last update: <span id="lastUpdate">-</span></p>
+
+    <h2>Server Status</h2>
+    <table id="serverTable">
+        <thead>
+            <tr>
+                <th>Server URL</th>
+                <th>Health</th>
+                <th>In-Flight</th>
+                <th>Max Concurrent</th>
+                <th>Last Check</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <h2>Model Metrics (Last 60 Minutes)</h2>
+    <table id="modelTable">
+        <thead>
+            <tr>
+                <th>Model Name</th>
+                <th>Total In-Flight</th>
+                <th>Processing</th>
+                <th>Queued</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        async function fetchData() {
+            try {
+                const [statusRes, metricsRes] = await Promise.all([
+                    fetch('/api/dashboard/status'),
+                    fetch('/api/dashboard/metrics')
+                ]);
+                const servers = await statusRes.json();
+                const metrics = await metricsRes.json();
+                renderServers(servers);
+                renderMetrics(metrics);
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            } catch (err) {
+                console.error('Dashboard fetch error:', err);
+            }
+        }
+
+        function renderServers(servers) {
+            const tbody = document.querySelector('#serverTable tbody');
+            if (!servers.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="no-data">No servers configured</td></tr>';
+                return;
+            }
+            tbody.innerHTML = '';
+            servers.forEach(srv => {
+                const healthClass = srv.healthy ? 'healthy' : 'unhealthy';
+                const healthText = srv.healthy ? 'ONLINE' : 'OFFLINE';
+                const drainClass = srv.draining ? 'drain-on' : 'drain-off';
+                const drainText = srv.draining ? 'OFF' : 'ON';
+                const row = document.createElement('tr');
+                row.innerHTML =
+                    '<td>' + srv.url + '</td>' +
+                    '<td class="' + healthClass + '">' + healthText + '</td>' +
+                    '<td>' + srv.current_requests + '</td>' +
+                    '<td>' + srv.max_concurrent_requests + '</td>' +
+                    '<td>' + srv.last_health_check + '</td>' +
+                    '<td><button class="toggle-btn ' + drainClass + '" onclick="toggleDrain(\'' + srv.url + '\', ' + !srv.draining + ')">' + drainText + '</button></td>';
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderMetrics(metrics) {
+            const tbody = document.querySelector('#modelTable tbody');
+            if (!metrics.length) {
+                tbody.innerHTML = '<tr><td colspan="4" class="no-data">No model activity in the last 60 minutes</td></tr>';
+                return;
+            }
+            tbody.innerHTML = '';
+            metrics.forEach(m => {
+                const row = document.createElement('tr');
+                row.innerHTML =
+                    '<td>' + m.model_name + '</td>' +
+                    '<td>' + m.total_in_flight + '</td>' +
+                    '<td>' + m.processing + '</td>' +
+                    '<td>' + m.queued + '</td>';
+                tbody.appendChild(row);
+            });
+        }
+
+        async function toggleDrain(url, draining) {
+            await fetch('/api/dashboard/toggle', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({url: url, draining: draining})
+            });
+            fetchData();
+        }
+
+        fetchData();
+        setInterval(fetchData, 10000);
+    </script>
+</body>
+</html>
