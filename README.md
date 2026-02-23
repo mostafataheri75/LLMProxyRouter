@@ -5,6 +5,7 @@ An OpenAI-compatible API proxy router that manages, queues, and load-balances re
 ## Features
 
 - **OpenAI API Compatibility** — Supports `/v1/chat/completions`, `/v1/completions`, `/v1/models`, and `/v1/embeddings`
+- **Optional Client Authentication** — Protect the proxy with Bearer token API keys (via config file or CLI flags)
 - **Dynamic Health Checking** — Polls all backend servers every 60 seconds; only routes to healthy servers
 - **Least-Connections Load Balancing** — Distributes requests evenly across available backends
 - **Concurrency Limits & Queuing** — Per-server concurrency caps with automatic request queuing when all servers are busy
@@ -77,16 +78,68 @@ Open `http://localhost:8080/dashboard` in a browser. The dashboard auto-refreshe
 - **Server Status** — Health, in-flight requests, and ON/OFF drain toggle per server
 - **Model Metrics** — Total in-flight, processing, and queued requests per model (last 60 minutes)
 
+## Authentication
+
+By default the proxy is **open** — any client can call the API without credentials. You can restrict access by setting one or more proxy API keys. Clients must then include an `Authorization: Bearer <key>` header.
+
+Keys can be provided in two ways (or both — they are merged and deduplicated):
+
+### Option A: CLI flag (recommended)
+
+```bash
+python run.py --proxy-api-key "sk-secret-1" --proxy-api-key "sk-secret-2"
+```
+
+### Option B: Config file
+
+```yaml
+proxy_api_keys:
+  - "sk-secret-1"
+  - "sk-secret-2"
+```
+
+### Security considerations
+
+> **Warning:** Storing API keys in `config.yaml` means they are saved in **plain text on disk**. Anyone with read access to the file — or to a repository if you accidentally commit it — can see them. For production deployments, prefer passing keys via the `--proxy-api-key` CLI flag, environment variables, or a secrets manager, and make sure `config.yaml` is listed in `.gitignore`.
+
+### Example authenticated request
+
+```bash
+curl http://localhost:8080/v1/chat/completions \
+  -H "Authorization: Bearer sk-secret-1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "meta-llama/Llama-3.1-8B-Instruct",
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "max_tokens": 64
+  }'
+```
+
+> **Note:** The dashboard (`/dashboard`) is intentionally **not** protected by API key authentication so it remains accessible via the browser without extra setup.
+
 ## Configuration Reference
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `logging` | bool | `false` | Enable request/response logging to stdout |
+| `proxy_api_keys` | list[str] | *none* | Bearer tokens clients must supply (omit to disable auth) |
 | `health_check.interval_seconds` | int | `60` | Seconds between health check rounds |
 | `health_check.timeout_seconds` | int | `5` | Timeout per health check request |
 | `models[].name` | string | required | Model identifier (must match vLLM's model name) |
 | `models[].servers[].url` | string | required | Backend vLLM server URL |
 | `models[].servers[].max_concurrent_requests` | int | `32` | Max in-flight requests for this server |
+
+## CLI Reference
+
+```
+python run.py [--host HOST] [--port PORT] [--proxy-api-key KEY ...]
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--host` | `0.0.0.0` | Bind address |
+| `--port` | `8080` | Bind port |
+| `--proxy-api-key` | *none* | Client API key (repeatable; merged with config file keys) |
 
 ## Integration Test
 
@@ -102,7 +155,7 @@ The script discovers models via `/v1/models`, sends a test request to each, prin
 
 ```
 LLM-farm/
-├── run.py                     # Entry point
+├── run.py                     # Entry point (with CLI arg parsing)
 ├── config.yaml                # Your configuration
 ├── requirements.txt           # Python dependencies
 ├── sample_files/
@@ -111,6 +164,7 @@ LLM-farm/
 │   ├── main.py                # FastAPI app factory
 │   ├── config.py              # Config loader
 │   ├── state.py               # Runtime state management
+│   ├── auth.py                # Client API key authentication
 │   ├── models/
 │   │   └── schemas.py         # OpenAI request/response schemas
 │   ├── routers/

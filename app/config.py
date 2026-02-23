@@ -22,6 +22,7 @@ class HealthCheckConfig(BaseModel):
 
 class AppConfig(BaseModel):
     logging: bool = False
+    proxy_api_keys: Optional[List[str]] = None
     health_check: HealthCheckConfig = HealthCheckConfig()
     models: List[ModelConfig]
 

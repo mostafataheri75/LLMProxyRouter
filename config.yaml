@@ -1,5 +1,11 @@
 logging: false
 
+# Optional: require clients to authenticate with a Bearer token.
+# Uncomment and add keys below to enable. Can also be set via --proxy-api-key CLI flag.
+# proxy_api_keys:
+#   - "sk-your-secret-key"
+#   - "sk-another-key"
+
 health_check:
   interval_seconds: 60
   timeout_seconds: 5
