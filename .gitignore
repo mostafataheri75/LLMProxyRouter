@@ -1,3 +1,7 @@
 ./venv
 venv/
 __pycache__/
+/models
+config.yaml
+config.yaml
+config.yaml

@@ -14,7 +14,7 @@ def parse_args():
              "Can be specified multiple times. Merged with proxy_api_keys in config.yaml.",
     )
     parser.add_argument("--host", default="0.0.0.0", help="Bind host (default: 0.0.0.0)")
-    parser.add_argument("--port", type=int, default=8080, help="Bind port (default: 8080)")
+    parser.add_argument("--port", type=int, default=8000, help="Bind port (default: 8000)")
     return parser.parse_args()
 
 
