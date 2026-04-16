@@ -22,6 +22,7 @@ class ServerState:
     healthy: bool = False
     draining: bool = False
     last_health_check: Optional[datetime] = None
+    last_seen_healthy: Optional[datetime] = None
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     async def acquire_slot(self) -> bool:

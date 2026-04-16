@@ -13,6 +13,7 @@ class ServerStatusItem(BaseModel):
     current_requests: int
     max_concurrent_requests: int
     last_health_check: Optional[str]
+    last_seen_healthy: Optional[str]
 
 
 class ModelMetricsItem(BaseModel):
@@ -39,6 +40,7 @@ async def server_status(request: Request) -> List[ServerStatusItem]:
             current_requests=srv.current_requests,
             max_concurrent_requests=srv.max_concurrent_requests,
             last_health_check=srv.last_health_check.isoformat() if srv.last_health_check else "never",
+            last_seen_healthy=srv.last_seen_healthy.isoformat() if srv.last_seen_healthy else "never",
         ))
     return result
 

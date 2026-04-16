@@ -76,12 +76,20 @@
 
         function renderServers(servers) {
             const tbody = document.querySelector('#serverTable tbody');
-            if (!servers.length) {
-                tbody.innerHTML = '<tr><td colspan="6" class="no-data">No servers configured</td></tr>';
+            const cutoff = new Date(Date.now() - 5 * 60 * 1000);
+            const visible = servers.filter(srv => {
+                if (srv.healthy) return true;
+                if (srv.last_seen_healthy && srv.last_seen_healthy !== 'never') {
+                    return new Date(srv.last_seen_healthy) > cutoff;
+                }
+                return false;
+            });
+            if (!visible.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="no-data">No servers online in the last 5 minutes</td></tr>';
                 return;
             }
             tbody.innerHTML = '';
-            servers.forEach(srv => {
+            visible.forEach(srv => {
                 const healthClass = srv.healthy ? 'healthy' : 'unhealthy';
                 const healthText = srv.healthy ? 'ONLINE' : 'OFFLINE';
                 const drainClass = srv.draining ? 'drain-on' : 'drain-off';

@@ -28,6 +28,8 @@ async def run_health_checks(state: AppState, client: httpx.AsyncClient) -> None:
         server_state = state.servers[url]
         server_state.healthy = is_healthy
         server_state.last_health_check = datetime.utcnow()
+        if is_healthy:
+            server_state.last_seen_healthy = datetime.utcnow()
 
 
 async def start_health_checker(state: AppState, client: httpx.AsyncClient) -> None:
